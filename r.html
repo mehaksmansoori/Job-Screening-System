@@ -1,0 +1,546 @@
+import React, { useState, useEffect } from 'react';
+
+// Main Application
+const JobScreeningApp = () => {
+  // State variables
+  const [jobs, setJobs] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [matchedCandidates, setMatchedCandidates] = useState([]);
+  const [threshold, setThreshold] = useState(70);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('summary');
+  
+  // Load data on component mount
+  useEffect(() => {
+    // Simulating data loading
+    setTimeout(() => {
+      const loadedJobs = parseJobDescriptions();
+      const loadedCandidates = parseCandidateResumes();
+      setJobs(loadedJobs);
+      setCandidates(loadedCandidates);
+      setLoading(false);
+    }, 1000);
+  }, []);
+  
+  // Select a job and find matching candidates
+  const handleJobSelect = (job) => {
+    setSelectedJob(job);
+    const matches = matchCandidatesToJob(job, candidates, threshold);
+    setMatchedCandidates(matches);
+  };
+  
+  // Handle threshold change
+  const handleThresholdChange = (e) => {
+    const newThreshold = parseInt(e.target.value);
+    setThreshold(newThreshold);
+    if (selectedJob) {
+      const matches = matchCandidatesToJob(selectedJob, candidates, newThreshold);
+      setMatchedCandidates(matches);
+    }
+  };
+  
+  // Generate interview email
+  const generateInterviewEmail = (candidate) => {
+    const jobTitle = selectedJob ? selectedJob.title : "the position";
+    return {
+      to: candidate.email,
+      subject: `Interview Invitation for ${jobTitle} at Our Company`,
+      body: `Dear ${candidate.name},
+
+We hope this email finds you well. After reviewing your impressive qualifications, we are pleased to invite you for an interview for the ${jobTitle} position.
+
+Your experience in ${candidate.topSkills.join(', ')} aligns well with our requirements, and we believe you would be a valuable addition to our team.
+
+Please select one of the following time slots for your interview:
+- Monday, April 14th, 10:00 AM - 11:00 AM
+- Tuesday, April 15th, 2:00 PM - 3:00 PM
+- Wednesday, April 16th, 11:00 AM - 12:00 PM
+
+The interview will be conducted virtually. Please reply to this email with your preferred time slot, and we will send you the meeting details.
+
+We look forward to speaking with you!
+
+Best regards,
+Recruitment Team
+Our Company`
+    };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-t-4 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-lg">Loading application data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-blue-600 text-white p-4 shadow-md">
+        <div className="container mx-auto">
+          <h1 className="text-2xl font-bold">AI-Powered Job Screening System</h1>
+          <p className="text-sm opacity-80">Enhancing recruitment with AI and data intelligence</p>
+        </div>
+      </header>
+      
+      <main className="container mx-auto p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Job Selection Panel */}
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h2 className="text-lg font-bold mb-4">Available Job Positions</h2>
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {jobs.map((job, index) => (
+                <div 
+                  key={index} 
+                  className={`p-3 rounded cursor-pointer hover:bg-gray-100 border-l-4 ${selectedJob && selectedJob.title === job.title ? 'bg-blue-50 border-blue-500' : 'border-transparent'}`}
+                  onClick={() => handleJobSelect(job)}
+                >
+                  <h3 className="font-medium">{job.title}</h3>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Center Panel - Job Details or Matched Candidates */}
+          <div className="md:col-span-2 bg-white rounded-lg shadow-md p-4">
+            {selectedJob ? (
+              <div>
+                <div className="mb-4 flex justify-between items-center">
+                  <h2 className="text-xl font-bold">{selectedJob.title}</h2>
+                  <div className="flex items-center">
+                    <label className="mr-2 text-sm">Match Threshold:</label>
+                    <input 
+                      type="range" 
+                      min="50" 
+                      max="100" 
+                      value={threshold} 
+                      onChange={handleThresholdChange}
+                      className="w-32"
+                    />
+                    <span className="ml-2 text-sm font-medium">{threshold}%</span>
+                  </div>
+                </div>
+                
+                <div className="mb-4 border-b">
+                  <div className="flex space-x-4">
+                    <button 
+                      className={`px-4 py-2 ${activeTab === 'summary' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() => setActiveTab('summary')}
+                    >
+                      Job Summary
+                    </button>
+                    <button 
+                      className={`px-4 py-2 ${activeTab === 'matches' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() => setActiveTab('matches')}
+                    >
+                      Matched Candidates ({matchedCandidates.length})
+                    </button>
+                  </div>
+                </div>
+                
+                {activeTab === 'summary' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-700">Job Description</h3>
+                      <p className="text-sm mt-1">{selectedJob.description}</p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-gray-700">Key Requirements</h3>
+                      <ul className="list-disc pl-5 mt-1 text-sm">
+                        {selectedJob.requirements.map((req, index) => (
+                          <li key={index}>{req}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-gray-700">Responsibilities</h3>
+                      <ul className="list-disc pl-5 mt-1 text-sm">
+                        {selectedJob.responsibilities.map((resp, index) => (
+                          <li key={index}>{resp}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {matchedCandidates.length > 0 ? (
+                      <div className="space-y-4">
+                        {matchedCandidates.map((candidate, index) => (
+                          <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-bold">{candidate.name}</h3>
+                                <p className="text-sm text-gray-600">{candidate.email} | {candidate.phone}</p>
+                                <div className="mt-2">
+                                  <span className="text-sm font-medium">Match Score: </span>
+                                  <span className={`font-bold ${candidate.matchScore >= 80 ? 'text-green-600' : 'text-orange-500'}`}>
+                                    {candidate.matchScore}%
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                                  onClick={() => alert(`Email would be sent to ${candidate.email}`)}>
+                                  Send Interview Request
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <h4 className="font-medium text-gray-700">Education</h4>
+                                <ul className="list-disc pl-5 mt-1">
+                                  {candidate.education.map((edu, i) => (
+                                    <li key={i}>{edu}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-700">Skills</h4>
+                                <p>{candidate.skills}</p>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-700">Experience</h4>
+                                <ul className="list-disc pl-5 mt-1">
+                                  {candidate.experience.map((exp, i) => (
+                                    <li key={i}>{exp}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-700">Certifications</h4>
+                                <p>{candidate.certifications}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-gray-500">No candidates match the current threshold criteria.</p>
+                        <p className="text-sm mt-2">Try lowering the threshold to see more potential matches.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <h2 className="text-xl font-bold mb-2">Welcome to the Job Screening System</h2>
+                <p className="text-gray-500">Select a job position from the left panel to get started.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Email Preview Modal would go here */}
+      </main>
+    </div>
+  );
+};
+
+// Helper Functions
+const parseJobDescriptions = () => {
+  // This would normally be fetched from a backend API
+  return [
+    {
+      title: "Software Engineer",
+      description: "We are seeking a skilled Software Engineer to design, develop, and maintain software applications. The ideal candidate will write efficient code, troubleshoot issues, and collaborate with teams to deliver high-quality solutions.",
+      requirements: [
+        "Bachelor's degree in Computer Science or a related field",
+        "Proficiency in programming languages like Python, Java, or C++",
+        "Experience with databases, web development, and software frameworks",
+        "Strong problem-solving skills and attention to detail",
+        "Ability to work both independently and in a team environment"
+      ],
+      responsibilities: [
+        "Develop, test, and deploy software applications",
+        "Write clean, maintainable, and scalable code",
+        "Collaborate with cross-functional teams to define and implement features",
+        "Troubleshoot and debug issues for optimal performance",
+        "Stay updated with emerging technologies and best practices"
+      ],
+      keywords: ["software", "programming", "java", "python", "c++", "web development", "databases", "code"]
+    },
+    {
+      title: "Data Scientist",
+      description: "We are looking for a skilled Data Scientist to analyze complex datasets, develop predictive models, and provide actionable insights. You will collaborate with cross-functional teams to optimize business strategies and drive data-driven decision-making.",
+      requirements: [
+        "Bachelor's or Master's degree in Data Science, Computer Science, or a related field",
+        "Proficiency in Python, R, SQL, and machine learning frameworks",
+        "Experience with data visualization tools like Tableau or Power BI",
+        "Strong analytical and problem-solving skills",
+        "Ability to work independently and in a team environment"
+      ],
+      responsibilities: [
+        "Collect, clean, and analyze large datasets",
+        "Develop and deploy machine learning models",
+        "Build predictive analytics solutions to improve business outcomes",
+        "Communicate findings through reports and visualizations",
+        "Stay updated with advancements in data science and AI"
+      ],
+      keywords: ["data science", "machine learning", "python", "R", "SQL", "predictive models", "analytics", "visualization"]
+    },
+    {
+      title: "Product Manager",
+      description: "We are seeking an innovative and strategic Product Manager to lead the development and execution of new products. The ideal candidate will collaborate with cross-functional teams to define product roadmaps, analyze market trends, and ensure successful product launches.",
+      requirements: [
+        "Bachelor's degree in Business, Computer Science, or a related field",
+        "Experience in product management, agile methodologies, and market research",
+        "Strong analytical, leadership, and communication skills",
+        "Familiarity with project management tools and data-driven decision-making"
+      ],
+      responsibilities: [
+        "Define product vision and strategy based on market research and customer needs",
+        "Work closely with engineering, design, and marketing teams to develop and launch products",
+        "Prioritize features, create roadmaps, and manage product lifecycle",
+        "Analyze user feedback and data to optimize product performance",
+        "Ensure alignment between business goals and product development"
+      ],
+      keywords: ["product management", "agile", "market research", "leadership", "strategy", "roadmap"]
+    },
+    {
+      title: "Cybersecurity Analyst",
+      description: "We are looking for a skilled Cybersecurity Analyst to protect our organization's systems and data from cyber threats. You will monitor networks, analyze security incidents, and implement protective measures to ensure compliance and data integrity.",
+      requirements: [
+        "Bachelor's degree in Cybersecurity, Computer Science, or related field",
+        "Experience with security tools like SIEM, firewalls, and intrusion detection systems",
+        "Knowledge of network security, encryption, and risk management",
+        "Strong analytical and problem-solving skills",
+        "Certifications like CEH, CISSP, or CompTIA Security+ are a plus"
+      ],
+      responsibilities: [
+        "Monitor and analyze security alerts to detect potential threats",
+        "Conduct vulnerability assessments and risk analysis",
+        "Implement security policies, firewalls, and encryption protocols",
+        "Investigate and respond to security breaches",
+        "Ensure compliance with cybersecurity regulations and best practices"
+      ],
+      keywords: ["cybersecurity", "security", "network", "firewall", "encryption", "risk", "penetration testing", "CEH"]
+    },
+    {
+      title: "Machine Learning Engineer",
+      description: "We are looking for a skilled Machine Learning Engineer to develop, train, and deploy AI models for real-world applications. You will work with large datasets, optimize algorithms, and collaborate with cross-functional teams to drive innovation.",
+      requirements: [
+        "Bachelor's or Master's in Computer Science, Data Science, or a related field",
+        "Proficiency in Python, TensorFlow, PyTorch, and Scikit-learn",
+        "Experience with data preprocessing, model deployment, and cloud platforms",
+        "Strong problem-solving skills and analytical mindset"
+      ],
+      responsibilities: [
+        "Develop and optimize machine learning models for various applications",
+        "Process and analyze large datasets to extract meaningful insights",
+        "Deploy and maintain AI models in production environments",
+        "Collaborate with data scientists, engineers, and product teams",
+        "Stay updated with the latest advancements in AI and ML"
+      ],
+      keywords: ["machine learning", "AI", "python", "tensorflow", "pytorch", "deep learning", "NLP", "computer vision"]
+    }
+  ];
+};
+
+const parseCandidateResumes = () => {
+  // This would normally be fetched from a backend API
+  return [
+    {
+      id: "C1061",
+      name: "Alyssa Chavez",
+      email: "alyssachavez88@gmail.com",
+      phone: "+1-465-3587",
+      education: [
+        "Diploma in Software Engineering (2013-2015)"
+      ],
+      experience: [
+        "Data Scientist at ABC Inc. (2019-2023)"
+      ],
+      skills: "Cybersecurity - penetration testing, risk assessment, securing enterprise networks",
+      certifications: "AWS Certified Solutions Architect",
+      achievements: "Published a research paper on AI ethics",
+      techStack: "Java, Spring Boot, MySQL, Kafka, Azure DevOps",
+      topSkills: ["Cybersecurity", "Data Science", "AWS"]
+    },
+    {
+      id: "C1070",
+      name: "Scott Saunders",
+      email: "scottsaunders13@gmail.com",
+      phone: "+1-367-5130",
+      education: [
+        "Bachelor of Engineering in IT (2014-2018)",
+        "Master of Business Administration (2017-2019)",
+        "Ph.D. in Artificial Intelligence (2016-2021)"
+      ],
+      experience: [
+        "Software Engineer at XYZ Corp (2018-2022)"
+      ],
+      skills: "Python & Machine Learning - TensorFlow, PyTorch, Scikit-learn",
+      certifications: "AWS Certified Solutions Architect",
+      achievements: "Developed an AI chatbot",
+      techStack: "Python, TensorFlow, PyTorch, PostgreSQL, Docker, Kubernetes",
+      topSkills: ["Machine Learning", "Python", "Software Engineering"]
+    },
+    {
+      id: "C1080",
+      name: "Pamela Kerr",
+      email: "pamelakerr20@gmail.com",
+      phone: "+1-453-5337",
+      education: [
+        "Ph.D. in Artificial Intelligence (2016-2021)",
+        "Diploma in Software Engineering (2013-2015)"
+      ],
+      experience: [
+        "Software Engineer at XYZ Corp (2018-2022)"
+      ],
+      skills: "Cybersecurity - penetration testing, risk assessment, securing enterprise networks",
+      certifications: "Certified Ethical Hacker (CEH)",
+      achievements: "Developed an AI chatbot",
+      techStack: "Python, TensorFlow, PyTorch, PostgreSQL, Docker, Kubernetes",
+      topSkills: ["Cybersecurity", "AI", "Software Engineering"]
+    },
+    {
+      id: "C1161", 
+      name: "Richard Molina",
+      email: "richardmolina72@gmail.com",
+      phone: "+1-908-7110",
+      education: [
+        "Bachelor of Engineering in IT (2014-2018)",
+        "Master of Business Administration (2017-2019)",
+        "Bachelor of Science in Computer Science (2015-2019)"
+      ],
+      experience: [
+        "Product Manager at DEF Ltd. (2017-2021)",
+        "Software Engineer at XYZ Corp (2018-2022)"
+      ],
+      skills: "Python & Machine Learning - TensorFlow, PyTorch, Scikit-learn",
+      certifications: "AWS Certified Solutions Architect",
+      achievements: "Developed an AI chatbot",
+      techStack: "Java, Spring Boot, MySQL, Kafka, Azure DevOps",
+      topSkills: ["Product Management", "Machine Learning", "Software Engineering"]
+    },
+    {
+      id: "C1320",
+      name: "Ryan Flowers",
+      email: "ryanflowers36@gmail.com",
+      phone: "+1-466-7250",
+      education: [
+        "Bachelor of Science in Computer Science (2015-2019)"
+      ],
+      experience: [
+        "Data Scientist at ABC Inc. (2019-2023)"
+      ],
+      skills: "Cloud Computing - AWS, Azure, GCP",
+      certifications: "Certified Ethical Hacker (CEH)",
+      achievements: "Developed an AI chatbot",
+      techStack: "Java, Spring Boot, MySQL, Kafka, Azure DevOps",
+      topSkills: ["Data Science", "Cloud Computing", "Computer Science"]
+    },
+    {
+      id: "C1446",
+      name: "Daniel Bailey",
+      email: "danielbailey75@gmail.com",
+      phone: "+1-969-9430",
+      education: [
+        "Master of Science in Data Science (2019-2021)",
+        "Bachelor of Science in Computer Science (2015-2019)",
+        "Ph.D. in Artificial Intelligence (2016-2021)"
+      ],
+      experience: [
+        "Software Engineer at XYZ Corp (2018-2022)"
+      ],
+      skills: "Cloud Computing - AWS, Azure, GCP",
+      certifications: "AWS Certified Solutions Architect",
+      achievements: "Developed an AI chatbot",
+      techStack: "Java, Spring Boot, MySQL, Kafka, Azure DevOps",
+      topSkills: ["Data Science", "AI", "Cloud Computing"]
+    }
+  ];
+};
+
+// Simple matching algorithm
+const matchCandidatesToJob = (job, candidates, threshold) => {
+  const matchedCandidates = candidates.map(candidate => {
+    // Calculate match score based on various factors
+    let score = 0;
+    let totalPoints = 0;
+    
+    // Education match - check if relevant degrees
+    const educationKeywords = ['computer science', 'software', 'engineering', 'IT', 'information technology', 'data science', 'artificial intelligence', 'AI', 'machine learning'];
+    const hasRelevantEducation = candidate.education.some(edu => 
+      educationKeywords.some(keyword => edu.toLowerCase().includes(keyword.toLowerCase()))
+    );
+    
+    if (hasRelevantEducation) {
+      score += 20;
+    }
+    totalPoints += 20;
+    
+    // Experience match
+    let experienceScore = 0;
+    const experienceKeywords = job.keywords;
+    
+    candidate.experience.forEach(exp => {
+      experienceKeywords.forEach(keyword => {
+        if (exp.toLowerCase().includes(keyword.toLowerCase())) {
+          experienceScore += 5;
+        }
+      });
+    });
+    experienceScore = Math.min(experienceScore, 30); // Cap at 30 points
+    score += experienceScore;
+    totalPoints += 30;
+    
+    // Skills match
+    let skillsScore = 0;
+    job.keywords.forEach(keyword => {
+      if (candidate.skills.toLowerCase().includes(keyword.toLowerCase())) {
+        skillsScore += 10;
+      }
+    });
+    skillsScore = Math.min(skillsScore, 30); // Cap at 30 points
+    score += skillsScore;
+    totalPoints += 30;
+    
+    // Certification match
+    const certificationScore = 10;
+    if (job.title.includes("Security") && candidate.certifications.includes("CEH")) {
+      score += certificationScore;
+    } else if (job.title.includes("Cloud") && candidate.certifications.includes("AWS")) {
+      score += certificationScore;
+    } else if (candidate.certifications.includes("AWS") || candidate.certifications.includes("CEH")) {
+      score += certificationScore / 2; // Half points for general certifications
+    }
+    totalPoints += 10;
+    
+    // Achievement match
+    let achievementScore = 0;
+    const achievementKeywords = job.keywords;
+    achievementKeywords.forEach(keyword => {
+      if (candidate.achievements.toLowerCase().includes(keyword.toLowerCase())) {
+        achievementScore += 2;
+      }
+    });
+    achievementScore = Math.min(achievementScore, 10); // Cap at 10 points
+    score += achievementScore;
+    totalPoints += 10;
+    
+    // Calculate final percentage score
+    const matchScore = Math.round((score / totalPoints) * 100);
+    
+    return {
+      ...candidate,
+      matchScore
+    };
+  });
+  
+  // Filter by threshold and sort by match score (descending)
+  return matchedCandidates
+    .filter(candidate => candidate.matchScore >= threshold)
+    .sort((a, b) => b.matchScore - a.matchScore);
+};
+
+export default JobScreeningApp;
